@@ -1,24 +1,29 @@
-import * as Y from 'yjs'
-import * as encoding from 'lib0/encoding.js'
-import * as decoding from 'lib0/decoding.js'
-import * as binary from 'lib0/binary.js'
-import * as promise from 'lib0/promise.js'
-import * as buffer from 'lib0/buffer.js'
-// @ts-ignore
-import defaultLevel from 'level'
-import { Buffer } from 'buffer'
+'use strict';
 
-export const PREFERRED_TRIM_SIZE = 500
+Object.defineProperty(exports, '__esModule', { value: true });
 
-const YEncodingString = 0
-const YEncodingUint32 = 1
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var Y = require('yjs');
+var encoding = require('lib0/dist/encoding.cjs');
+var decoding = require('lib0/dist/decoding.cjs');
+var binary = require('lib0/dist/binary.cjs');
+var promise = require('lib0/dist/promise.cjs');
+var buffer = require('lib0/dist/buffer.cjs');
+var defaultLevel = _interopDefault(require('level'));
+var buffer$1 = require('buffer');
+
+const PREFERRED_TRIM_SIZE = 500;
+
+const YEncodingString = 0;
+const YEncodingUint32 = 1;
 
 const valueEncoding = {
   buffer: true,
   type: 'y-value',
   encode: /** @param {any} data */ data => data,
   decode: /** @param {any} data */ data => data
-}
+};
 
 /**
  * Write two bytes as an unsigned integer in big endian order.
@@ -28,11 +33,11 @@ const valueEncoding = {
  * @param {encoding.Encoder} encoder
  * @param {number} num The number that is to be encoded.
  */
-export const writeUint32BigEndian = (encoder, num) => {
+const writeUint32BigEndian = (encoder, num) => {
   for (let i = 3; i >= 0; i--) {
-    encoding.write(encoder, (num >>> (8 * i)) & binary.BITS8)
+    encoding.write(encoder, (num >>> (8 * i)) & binary.BITS8);
   }
-}
+};
 
 /**
  * Read 4 bytes as unsigned integer in big endian order.
@@ -44,52 +49,52 @@ export const writeUint32BigEndian = (encoder, num) => {
  * @param {decoding.Decoder} decoder
  * @return {number} An unsigned integer.
  */
-export const readUint32BigEndian = decoder => {
+const readUint32BigEndian = decoder => {
   const uint =
     (decoder.arr[decoder.pos + 3] +
     (decoder.arr[decoder.pos + 2] << 8) +
     (decoder.arr[decoder.pos + 1] << 16) +
-    (decoder.arr[decoder.pos] << 24)) >>> 0
-  decoder.pos += 4
+    (decoder.arr[decoder.pos] << 24)) >>> 0;
+  decoder.pos += 4;
   return uint
-}
+};
 
-export const keyEncoding = {
+const keyEncoding = {
   buffer: true,
   type: 'y-keys',
   /* istanbul ignore next */
   encode: /** @param {Array<string|number>} arr */  arr => {
-    const encoder = encoding.createEncoder()
+    const encoder = encoding.createEncoder();
     for (let i = 0; i < arr.length; i++) {
-      const v = arr[i]
+      const v = arr[i];
       if (typeof v === 'string') {
-        encoding.writeUint8(encoder, YEncodingString)
-        encoding.writeVarString(encoder, v)
+        encoding.writeUint8(encoder, YEncodingString);
+        encoding.writeVarString(encoder, v);
       } else /* istanbul ignore else */ if (typeof v === 'number') {
-        encoding.writeUint8(encoder, YEncodingUint32)
-        writeUint32BigEndian(encoder, v)
+        encoding.writeUint8(encoder, YEncodingUint32);
+        writeUint32BigEndian(encoder, v);
       } else {
         throw new Error('Unexpected key value')
       }
     }
-    return Buffer.from(encoding.toUint8Array(encoder))
+    return buffer$1.Buffer.from(encoding.toUint8Array(encoder))
   },
   decode: /** @param {Uint8Array} buf */ buf => {
-    const decoder = decoding.createDecoder(buf)
-    const key = []
+    const decoder = decoding.createDecoder(buf);
+    const key = [];
     while (decoding.hasContent(decoder)) {
       switch (decoding.readUint8(decoder)) {
         case YEncodingString:
-          key.push(decoding.readVarString(decoder))
+          key.push(decoding.readVarString(decoder));
           break
         case YEncodingUint32:
-          key.push(readUint32BigEndian(decoder))
+          key.push(readUint32BigEndian(decoder));
           break
       }
     }
     return key
   }
-}
+};
 
 /**
  * level returns an error if a value is not found.
@@ -100,9 +105,9 @@ export const keyEncoding = {
  * @param {any} key
  */
 const levelGet = async (db, key) => {
-  let res
+  let res;
   try {
-    res = await db.get(key)
+    res = await db.get(key);
   } catch (err) {
     /* istanbul ignore else */
     if (err.notFound) {
@@ -112,7 +117,7 @@ const levelGet = async (db, key) => {
     }
   }
   return res
-}
+};
 
 /**
  * Level expects a Buffer, but in Yjs we typically work with Uint8Arrays.
@@ -124,7 +129,7 @@ const levelGet = async (db, key) => {
  * @param {any} key
  * @param {Uint8Array} val
  */
-const levelPut = async (db, key, val) => db.put(key, Buffer.from(val))
+const levelPut = async (db, key, val) => db.put(key, buffer$1.Buffer.from(val));
 
 /**
  * A "bulkier" implementation of level streams. Returns the result in one flush.
@@ -133,19 +138,19 @@ const levelPut = async (db, key, val) => db.put(key, Buffer.from(val))
  * @param {object} opts
  * @return {Promise<Array<any>>}
  */
-export const getLevelBulkData = (db, opts) => promise.create((resolve, reject) => {
+const getLevelBulkData = (db, opts) => promise.create((resolve, reject) => {
   /**
    * @type {Array<any>} result
    */
-  const result = []
+  const result = [];
   db.createReadStream(
     opts
   ).on('data', /** @param {any} data */ data =>
     result.push(data)
   ).on('end', () =>
     resolve(result)
-  ).on('error', reject)
-})
+  ).on('error', reject);
+});
 
 /**
  * Get all document updates for a specific document.
@@ -155,11 +160,11 @@ export const getLevelBulkData = (db, opts) => promise.create((resolve, reject) =
  * @param {any} [opts]
  * @return {Promise<Array<Buffer>>}
  */
-export const getLevelUpdates = (db, docName, opts = { values: true, keys: false }) => getLevelBulkData(db, {
+const getLevelUpdates = (db, docName, opts = { values: true, keys: false }) => getLevelBulkData(db, {
   gte: createDocumentUpdateKey(docName, 0),
   lt: createDocumentUpdateKey(docName, binary.BITS32),
   ...opts
-})
+});
 
 /**
  * Get all document updates for a specific document.
@@ -169,25 +174,25 @@ export const getLevelUpdates = (db, docName, opts = { values: true, keys: false 
  * @param {boolean} keys
  * @return {Promise<Array<any>>}
  */
-export const getAllDocs = (db, values, keys) => getLevelBulkData(db, {
+const getAllDocs = (db, values, keys) => getLevelBulkData(db, {
   gte: ['v1_sv'],
   lt: ['v1_sw'],
   keys,
   values
-})
+});
 
 /**
  * @param {any} db
  * @param {string} docName
  * @return {Promise<number>} Returns -1 if this document doesn't exist yet
  */
-export const getCurrentUpdateClock = (db, docName) => getLevelUpdates(db, docName, { keys: true, values: false, reverse: true, limit: 1 }).then(keys => {
+const getCurrentUpdateClock = (db, docName) => getLevelUpdates(db, docName, { keys: true, values: false, reverse: true, limit: 1 }).then(keys => {
   if (keys.length === 0) {
     return -1
   } else {
     return keys[0][3]
   }
-})
+});
 
 /**
  * @param {any} db
@@ -198,13 +203,13 @@ export const getCurrentUpdateClock = (db, docName) => getLevelUpdates(db, docNam
 const clearRange = async (db, gte, lt) => {
   /* istanbul ignore else */
   if (db.supports.clear) {
-    await db.clear({ gte, lt })
+    await db.clear({ gte, lt });
   } else {
-    const keys = await getLevelBulkData(db, { values: false, keys: true, gte, lt })
-    const ops = keys.map(key => ({ type: 'del', key }))
-    await db.batch(ops)
+    const keys = await getLevelBulkData(db, { values: false, keys: true, gte, lt });
+    const ops = keys.map(key => ({ type: 'del', key }));
+    await db.batch(ops);
   }
-}
+};
 
 /**
  * @param {any} db
@@ -213,7 +218,7 @@ const clearRange = async (db, gte, lt) => {
  * @param {number} to lower than (not equal)
  * @return {Promise<void>}
  */
-const clearUpdatesRange = async (db, docName, from, to) => clearRange(db, createDocumentUpdateKey(docName, from), createDocumentUpdateKey(docName, to))
+const clearUpdatesRange = async (db, docName, from, to) => clearRange(db, createDocumentUpdateKey(docName, from), createDocumentUpdateKey(docName, to));
 
 /**
  * Create a unique key for a update message.
@@ -223,29 +228,29 @@ const clearUpdatesRange = async (db, docName, from, to) => clearRange(db, create
  * @param {number} clock must be unique
  * @return {Array<string|number>}
  */
-const createDocumentUpdateKey = (docName, clock) => ['v1', docName, 'update', clock]
+const createDocumentUpdateKey = (docName, clock) => ['v1', docName, 'update', clock];
 
 /**
  * @param {string} docName
  * @param {string} metaKey
  */
-const createDocumentMetaKey = (docName, metaKey) => ['v1', docName, 'meta', metaKey]
+const createDocumentMetaKey = (docName, metaKey) => ['v1', docName, 'meta', metaKey];
 
 /**
  * @param {string} docName
  */
-const createDocumentMetaEndKey = (docName) => ['v1', docName, 'metb'] // simple trick
+const createDocumentMetaEndKey = (docName) => ['v1', docName, 'metb']; // simple trick
 
 /**
  * We have a separate state vector key so we can iterate efficiently over all documents
  * @param {string} docName
  */
-const createDocumentStateVectorKey = (docName) => ['v1_sv', docName]
+const createDocumentStateVectorKey = (docName) => ['v1_sv', docName];
 
 /**
  * @param {string} docName
  */
-const createDocumentFirstKey = (docName) => ['v1', docName]
+const createDocumentFirstKey = (docName) => ['v1', docName];
 
 /**
  * We use this key as the upper limit of all keys that can be written.
@@ -254,9 +259,9 @@ const createDocumentFirstKey = (docName) => ['v1', docName]
  *
  * @param {string} docName
  */
-const createDocumentLastKey = (docName) => ['v1', docName, 'zzzzzzz']
+const createDocumentLastKey = (docName) => ['v1', docName, 'zzzzzzz'];
 
-// const emptyStateVector = (() => Y.encodeStateVector(new Y.Doc()))()
+// const emptyStateVector = (() => Y.encodeStateVector({new Y.Doc(})))()
 
 /**
  * For now this is a helper method that creates a Y.Doc and then re-encodes a document update.
@@ -266,14 +271,14 @@ const createDocumentLastKey = (docName) => ['v1', docName, 'zzzzzzz']
  * @return {{update:Uint8Array, sv: Uint8Array}}
  */
 const mergeUpdates = (updates) => {
-  const ydoc = new Y.Doc()
+  const ydoc = new Y.Doc({gc: false});
   ydoc.transact(() => {
     for (let i = 0; i < updates.length; i++) {
-      Y.applyUpdate(ydoc, updates[i])
+      Y.applyUpdate(ydoc, updates[i]);
     }
-  })
+  });
   return { update: Y.encodeStateAsUpdate(ydoc), sv: Y.encodeStateVector(ydoc) }
-}
+};
 
 /**
  * @param {any} db
@@ -282,35 +287,35 @@ const mergeUpdates = (updates) => {
  * @param {number} clock current clock of the document so we can determine when this statevector was created
  */
 const writeStateVector = async (db, docName, sv, clock) => {
-  const encoder = encoding.createEncoder()
-  encoding.writeVarUint(encoder, clock)
-  encoding.writeVarUint8Array(encoder, sv)
-  await levelPut(db, createDocumentStateVectorKey(docName), encoding.toUint8Array(encoder))
-}
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, clock);
+  encoding.writeVarUint8Array(encoder, sv);
+  await levelPut(db, createDocumentStateVectorKey(docName), encoding.toUint8Array(encoder));
+};
 
 /**
  * @param {Uint8Array} buf
  * @return {{ sv: Uint8Array, clock: number }}
  */
 const decodeLeveldbStateVector = buf => {
-  const decoder = decoding.createDecoder(buf)
-  const clock = decoding.readVarUint(decoder)
-  const sv = decoding.readVarUint8Array(decoder)
+  const decoder = decoding.createDecoder(buf);
+  const clock = decoding.readVarUint(decoder);
+  const sv = decoding.readVarUint8Array(decoder);
   return { sv, clock }
-}
+};
 
 /**
  * @param {any} db
  * @param {string} docName
  */
 const readStateVector = async (db, docName) => {
-  const buf = await levelGet(db, createDocumentStateVectorKey(docName))
+  const buf = await levelGet(db, createDocumentStateVectorKey(docName));
   if (buf === null) {
     // no state vector created yet or no document exists
     return { sv: null, clock: -1 }
   }
   return decodeLeveldbStateVector(buf)
-}
+};
 
 /**
  * @param {any} db
@@ -320,11 +325,11 @@ const readStateVector = async (db, docName) => {
  * @return {Promise<number>} returns the clock of the flushed doc
  */
 const flushDocument = async (db, docName, stateAsUpdate, stateVector) => {
-  const clock = await storeUpdate(db, docName, stateAsUpdate)
-  await writeStateVector(db, docName, stateVector, clock)
-  await clearUpdatesRange(db, docName, 0, clock) // intentionally not waiting for the promise to resolve!
+  const clock = await storeUpdate(db, docName, stateAsUpdate);
+  await writeStateVector(db, docName, stateVector, clock);
+  await clearUpdatesRange(db, docName, 0, clock); // intentionally not waiting for the promise to resolve!
   return clock
-}
+};
 
 /**
  * @param {any} db
@@ -333,19 +338,19 @@ const flushDocument = async (db, docName, stateAsUpdate, stateVector) => {
  * @return {Promise<number>} Returns the clock of the stored update
  */
 const storeUpdate = async (db, docName, update) => {
-  const clock = await getCurrentUpdateClock(db, docName)
+  const clock = await getCurrentUpdateClock(db, docName);
   if (clock === -1) {
     // make sure that a state vector is aways written, so we can search for available documents
-    const ydoc = new Y.Doc()
-    Y.applyUpdate(ydoc, update)
-    const sv = Y.encodeStateVector(ydoc)
-    await writeStateVector(db, docName, sv, 0)
+    const ydoc = new Y.Doc({gc: false});
+    Y.applyUpdate(ydoc, update);
+    const sv = Y.encodeStateVector(ydoc);
+    await writeStateVector(db, docName, sv, 0);
   }
-  await levelPut(db, createDocumentUpdateKey(docName, clock + 1), update)
+  await levelPut(db, createDocumentUpdateKey(docName, clock + 1), update);
   return clock + 1
-}
+};
 
-export class LeveldbPersistence {
+class LeveldbPersistence {
   /**
    * @param {string} location
    * @param {object} [opts]
@@ -353,8 +358,8 @@ export class LeveldbPersistence {
    * @param {object} [opts.levelOptions] Options that are passed down to the level instance
    */
   constructor (location, /* istanbul ignore next */ { level = defaultLevel, levelOptions = {} } = {}) {
-    const db = level(location, { ...levelOptions, valueEncoding, keyEncoding })
-    this.tr = promise.resolve()
+    const db = level(location, { ...levelOptions, valueEncoding, keyEncoding });
+    this.tr = promise.resolve();
     /**
      * Execute an transaction on a database. This will ensure that other processes are currently not writing.
      *
@@ -368,20 +373,20 @@ export class LeveldbPersistence {
      * @return {Promise<T>}
      */
     this._transact = f => {
-      const currTr = this.tr
+      const currTr = this.tr;
       this.tr = (async () => {
-        await currTr
-        let res = /** @type {any} */ (null)
+        await currTr;
+        let res = /** @type {any} */ (null);
         try {
-          res = await f(db)
+          res = await f(db);
         } catch (err) {
           /* istanbul ignore next */
-          console.warn('Error during y-leveldb transaction', err)
+          console.warn('Error during y-leveldb transaction', err);
         }
         return res
-      })()
+      })();
       return this.tr
-    }
+    };
   }
 
   /**
@@ -389,9 +394,9 @@ export class LeveldbPersistence {
    */
   flushDocument (docName) {
     return this._transact(async db => {
-      const updates = await getLevelUpdates(db, docName)
-      const { update, sv } = mergeUpdates(updates)
-      await flushDocument(db, docName, update, sv)
+      const updates = await getLevelUpdates(db, docName);
+      const { update, sv } = mergeUpdates(updates);
+      await flushDocument(db, docName, update, sv);
     })
   }
 
@@ -401,15 +406,15 @@ export class LeveldbPersistence {
    */
   getYDoc (docName) {
     return this._transact(async db => {
-      const updates = await getLevelUpdates(db, docName)
-      const ydoc = new Y.Doc()
+      const updates = await getLevelUpdates(db, docName);
+      const ydoc = new Y.Doc({gc: false});
       ydoc.transact(() => {
         for (let i = 0; i < updates.length; i++) {
-          Y.applyUpdate(ydoc, updates[i])
+          Y.applyUpdate(ydoc, updates[i]);
         }
-      })
+      });
       if (updates.length > PREFERRED_TRIM_SIZE) {
-        await flushDocument(db, docName, Y.encodeStateAsUpdate(ydoc), Y.encodeStateVector(ydoc))
+        await flushDocument(db, docName, Y.encodeStateAsUpdate(ydoc), Y.encodeStateVector(ydoc));
       }
       return ydoc
     })
@@ -421,18 +426,18 @@ export class LeveldbPersistence {
    */
   getStateVector (docName) {
     return this._transact(async db => {
-      const { clock, sv } = await readStateVector(db, docName)
-      let curClock = -1
+      const { clock, sv } = await readStateVector(db, docName);
+      let curClock = -1;
       if (sv !== null) {
-        curClock = await getCurrentUpdateClock(db, docName)
+        curClock = await getCurrentUpdateClock(db, docName);
       }
       if (sv !== null && clock === curClock) {
         return sv
       } else {
         // current state vector is outdated
-        const updates = await getLevelUpdates(db, docName)
-        const { update, sv } = mergeUpdates(updates)
-        await flushDocument(db, docName, update, sv)
+        const updates = await getLevelUpdates(db, docName);
+        const { update, sv } = mergeUpdates(updates);
+        await flushDocument(db, docName, update, sv);
         return sv
       }
     })
@@ -452,7 +457,7 @@ export class LeveldbPersistence {
    * @param {Uint8Array} stateVector
    */
   async getDiff (docName, stateVector) {
-    const ydoc = await this.getYDoc(docName)
+    const ydoc = await this.getYDoc(docName);
     return Y.encodeStateAsUpdate(ydoc, stateVector)
   }
 
@@ -462,8 +467,8 @@ export class LeveldbPersistence {
    */
   clearDocument (docName) {
     return this._transact(async db => {
-      await db.del(createDocumentStateVectorKey(docName))
-      await clearRange(db, createDocumentFirstKey(docName), createDocumentLastKey(docName))
+      await db.del(createDocumentStateVectorKey(docName));
+      await clearRange(db, createDocumentFirstKey(docName), createDocumentLastKey(docName));
     })
   }
 
@@ -493,7 +498,7 @@ export class LeveldbPersistence {
    */
   getMeta (docName, metaKey) {
     return this._transact(async db => {
-      const res = await levelGet(db, createDocumentMetaKey(docName, metaKey))
+      const res = await levelGet(db, createDocumentMetaKey(docName, metaKey));
       if (res === null) {
         return// return void
       }
@@ -506,7 +511,7 @@ export class LeveldbPersistence {
    */
   getAllDocNames () {
     return this._transact(async db => {
-      const docKeys = await getAllDocs(db, false, true)
+      const docKeys = await getAllDocs(db, false, true);
       return docKeys.map(key => key[1])
     })
   }
@@ -514,11 +519,11 @@ export class LeveldbPersistence {
   /**
    * @return {Promise<Array<{ name: string, sv: Uint8Array, clock: number }>>}
    */
-  getAllDocStateVectors () {
+  getAllDocStateVecors () {
     return this._transact(async db => {
-      const docs = /** @type {any} */ (await getAllDocs(db, true, true))
+      const docs = /** @type {any} */ (await getAllDocs(db, true, true));
       return docs.map(doc => {
-        const { sv, clock } = decodeLeveldbStateVector(doc.value)
+        const { sv, clock } = decodeLeveldbStateVector(doc.value);
         return { name: doc.key[1], sv, clock }
       })
     })
@@ -535,9 +540,9 @@ export class LeveldbPersistence {
         lt: createDocumentMetaEndKey(docName),
         keys: true,
         values: true
-      })
-      const metas = new Map()
-      data.forEach(v => { metas.set(v.key[3], buffer.decodeAny(v.value)) })
+      });
+      const metas = new Map();
+      data.forEach(v => { metas.set(v.key[3], buffer.decodeAny(v.value)); });
       return metas
     })
   }
@@ -558,3 +563,14 @@ export class LeveldbPersistence {
     return this._transact(async db => db.clear())
   }
 }
+
+exports.LeveldbPersistence = LeveldbPersistence;
+exports.PREFERRED_TRIM_SIZE = PREFERRED_TRIM_SIZE;
+exports.getAllDocs = getAllDocs;
+exports.getCurrentUpdateClock = getCurrentUpdateClock;
+exports.getLevelBulkData = getLevelBulkData;
+exports.getLevelUpdates = getLevelUpdates;
+exports.keyEncoding = keyEncoding;
+exports.readUint32BigEndian = readUint32BigEndian;
+exports.writeUint32BigEndian = writeUint32BigEndian;
+//# sourceMappingURL=y-leveldb.cjs.map

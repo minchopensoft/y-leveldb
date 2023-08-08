@@ -297,7 +297,7 @@ const createDocumentLastKey = (docName) => ['v1', docName, 'zzzzzzz'];
  * @return {{update:Uint8Array, sv: Uint8Array}}
  */
 const mergeUpdates = (updates) => {
-  const ydoc = new Y__namespace.Doc();
+  const ydoc = new Y__namespace.Doc({gc: false});
   ydoc.transact(() => {
     for (let i = 0; i < updates.length; i++) {
       Y__namespace.applyUpdate(ydoc, updates[i]);
@@ -367,7 +367,7 @@ const storeUpdate = async (db, docName, update) => {
   const clock = await getCurrentUpdateClock(db, docName);
   if (clock === -1) {
     // make sure that a state vector is aways written, so we can search for available documents
-    const ydoc = new Y__namespace.Doc();
+    const ydoc = new Y__namespace.Doc({gc: false});
     Y__namespace.applyUpdate(ydoc, update);
     const sv = Y__namespace.encodeStateVector(ydoc);
     await writeStateVector(db, docName, sv, 0);
@@ -433,7 +433,7 @@ class LeveldbPersistence {
   getYDoc (docName) {
     return this._transact(async db => {
       const updates = await getLevelUpdates(db, docName);
-      const ydoc = new Y__namespace.Doc();
+      const ydoc = new Y__namespace.Doc({gc: false});
       ydoc.transact(() => {
         for (let i = 0; i < updates.length; i++) {
           Y__namespace.applyUpdate(ydoc, updates[i]);
